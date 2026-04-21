@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { api } from '../../lib/api';
 import { NotaDocument } from './NotaPDF';
 import { PDFDownloadLink } from '@react-pdf/renderer';
