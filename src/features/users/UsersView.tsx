@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X, ShieldCheck, Users } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, ShieldCheck, Users, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -53,6 +53,9 @@ export const UsersView = () => {
   const [editUser, setEditUser] = useState<User | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [pwUser, setPwUser] = useState<User | null>(null);
+  const [newPw, setNewPw] = useState('');
+  const [savingPw, setSavingPw] = useState(false);
 
   const set = (key: keyof typeof emptyForm, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -117,6 +120,24 @@ export const UsersView = () => {
       fetchUsers();
     } catch {
       toast.error('No se pudo actualizar el estado');
+    }
+  };
+
+  const openPwModal = (u: User) => { setPwUser(u); setNewPw(''); };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pwUser) return;
+    setSavingPw(true);
+    try {
+      await api.patch(`/users/${pwUser.id}/password`, { newPassword: newPw });
+      toast.success(`Contraseña de ${pwUser.nombre} actualizada`);
+      setPwUser(null);
+    } catch (err: any) {
+      const msg = err.response?.data?.message;
+      toast.error(Array.isArray(msg) ? msg[0] : msg || 'Error al cambiar la contraseña');
+    } finally {
+      setSavingPw(false);
     }
   };
 
@@ -198,6 +219,9 @@ export const UsersView = () => {
                     <button onClick={() => openEdit(u)} className="p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                       <Pencil size={14} />
                     </button>
+                    <button onClick={() => openPwModal(u)} className="p-2 rounded-xl text-muted-foreground hover:bg-amber-50 hover:text-amber-600 transition-colors">
+                      <KeyRound size={14} />
+                    </button>
                     <button onClick={() => handleDelete(u)} className="p-2 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
                       <Trash2 size={14} />
                     </button>
@@ -244,6 +268,7 @@ export const UsersView = () => {
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => openEdit(u)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"><Pencil size={13} /></button>
+                        <button onClick={() => openPwModal(u)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-amber-50 hover:text-amber-600 transition-colors"><KeyRound size={13} /></button>
                         <button onClick={() => handleDelete(u)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"><Trash2 size={13} /></button>
                       </div>
                     </td>
@@ -255,7 +280,52 @@ export const UsersView = () => {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Modal cambiar contraseña */}
+      {pwUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => setPwUser(null)} />
+          <div className="relative bg-card border border-border rounded-2xl w-full max-w-[360px] shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <div>
+                <h2 className="font-semibold text-[15px] text-foreground">Cambiar contraseña</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">{pwUser.nombre} {pwUser.apellido}</p>
+              </div>
+              <button onClick={() => setPwUser(null)} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                <X size={15} />
+              </button>
+            </div>
+            <form onSubmit={handleChangePassword} className="p-5 space-y-4">
+              <Field label="Nueva contraseña">
+                <input
+                  type="password"
+                  value={newPw}
+                  onChange={(e) => setNewPw(e.target.value)}
+                  required
+                  minLength={6}
+                  className={inputCls}
+                  placeholder="Mínimo 6 caracteres"
+                  autoFocus
+                />
+              </Field>
+              <div className="flex gap-2 pt-1">
+                <Button type="button" variant="outline" className="flex-1 rounded-lg h-9" onClick={() => setPwUser(null)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" className="flex-1 rounded-lg h-9 shadow-sm shadow-primary/20" disabled={savingPw}>
+                  {savingPw ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className="size-3.5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      Guardando...
+                    </span>
+                  ) : 'Cambiar contraseña'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal crear/editar */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
